@@ -5,32 +5,53 @@ namespace CellularAutomataSpreading
 {
     internal class Program
     {
-        static readonly int gridWidth = 50;
-        static readonly int gridHeight = 50;
-        static readonly int gridScale = 15;
+        static readonly int gridWidth = 750;
+        static readonly int gridHeight = 300;
+        static readonly int gridScale = 4;
 
         static readonly int[,] map = new int[gridWidth, gridHeight];
         static readonly int[,] tempMap = new int[gridWidth, gridHeight];
 
-        static readonly float updatesPerSecond = 50;
+        static readonly float updatesPerSecond = 30;
         static float updateTimer = 1 / updatesPerSecond;
 
         static bool paused = true;
 
         static readonly Random rand = new Random();
-        static readonly float spreadProbability = 1f;
+        static readonly float spreadProbability = 0.5f;
 
-        static readonly Color[] colors = new Color[3]
+        static bool flipOrder = false;
+
+        static Color[] colors = new Color[6]
         {
-            Color.BLACK,
-            Color.LIME,
-            Color.VIOLET,
+            Color.BLACK, //0
+            Color.LIME, //1
+            Color.DARKPURPLE, //2
+            Color.SKYBLUE, //3
+            Color.ORANGE, //4
+            Color.BLUE, //5
+        };
+        static KeyboardKey[] keys = new KeyboardKey[6]
+        {
+            KeyboardKey.KEY_ZERO,
+            KeyboardKey.KEY_ONE,
+            KeyboardKey.KEY_TWO,
+            KeyboardKey.KEY_THREE,
+            KeyboardKey.KEY_FOUR,
+            KeyboardKey.KEY_FIVE,
         };
 
         static void Main(string[] args)
         {
+            //colors = new Color[32];
+            //keys = new KeyboardKey[32];
+            //for (int i = 1; i < 32; i++)
+            //{
+            //    colors[i] = new Color(rand.Next(50, 255), rand.Next(50, 255), rand.Next(50, 255), 255);
+            //}
+            //colors[0] = Color.BLACK;
+
             Raylib.InitWindow(gridWidth * gridScale, gridHeight * gridScale, "Spreading");
-            Raylib.SetTargetFPS(120);
 
             while (!Raylib.WindowShouldClose())
             {
@@ -42,13 +63,36 @@ namespace CellularAutomataSpreading
 
                 if (!(mouseX < 0 || mouseY < 0 || mouseX >= gridWidth || mouseY >= gridHeight))
                 {
-                    if (Raylib.IsMouseButtonDown(MouseButton.MOUSE_BUTTON_LEFT))
+                    for (int i = 0; i < colors.Length; i++)
                     {
-                        map[mouseX, mouseY] = 1;
+                        if (Raylib.IsKeyDown(keys[i]))
+                        {
+                            map[mouseX, mouseY] = i;
+                        }
                     }
-                    if (Raylib.IsMouseButtonDown(MouseButton.MOUSE_BUTTON_RIGHT))
+                }
+
+                if (Raylib.IsKeyDown(KeyboardKey.KEY_F)) updateTimer = 0;
+
+                if (Raylib.IsKeyPressed(KeyboardKey.KEY_R))
+                {
+                    for (int y = 0; y < gridHeight; y++)
                     {
-                        map[mouseX, mouseY] = 2;
+                        for (int x = 0; x < gridWidth; x++)
+                        {
+                            map[x, y] = 0;
+                        }
+                    }
+                }
+
+                if (Raylib.IsKeyPressed(KeyboardKey.KEY_A))
+                {
+                    for (int y = 0; y < gridHeight; y++)
+                    {
+                        for (int x = 0; x < gridWidth; x++)
+                        {
+                            map[x, y] = rand.Next(0, colors.Length);
+                        }
                     }
                 }
 
@@ -60,7 +104,7 @@ namespace CellularAutomataSpreading
                 if (!paused && updateTimer <= 0)
                 {
                     UpdateGrid();
-                    updateTimer = 1 / updatesPerSecond;
+                    updateTimer += 1 / updatesPerSecond;
                 }
 
                 Raylib.BeginDrawing();
@@ -85,40 +129,34 @@ namespace CellularAutomataSpreading
 
         static void UpdateGrid()
         {
-            for (int y = 0; y < gridHeight; y++)
-            {
-                for (int x = 0; x < gridWidth; x++)
-                {
-                    tempMap[x, y] = map[x, y];
-                }
-            }
+            //if (rand.NextSingle() < 0.005f)
+            //{
+            //    map[rand.Next(0, gridWidth), rand.Next(0, gridHeight)] = rand.Next(0, colors.Length);
+            //}
+
+            flipOrder = !flipOrder;
 
             for (int y = 0; y < gridHeight; y++)
             {
                 for (int x = 0; x < gridWidth; x++)
                 {
-                    if (map[x, y] != 0)
+                    int sx = flipOrder ? gridWidth - x - 1 : x;
+                    int sy = flipOrder ? gridHeight - y - 1 : y;
+
+                    if (map[sx, sy] != 0)
                     {
                         if (rand.NextSingle() < spreadProbability)
                         {
-                            int nx = x + rand.Next(-1, 2);
+                            int nx = sx + rand.Next(-1, 2);
                         
-                            int ny = y + rand.Next(-1, 2);
+                            int ny = sy + rand.Next(-1, 2);
 
                             if (!(nx < 0 || ny < 0 || nx >= gridWidth || ny >= gridHeight))
                             {
-                                tempMap[nx, ny] = map[x, y];
+                                map[nx, ny] = map[sx, sy];
                             }
                         }
                     }
-                }
-            }
-
-            for (int y = 0; y < gridHeight; y++)
-            {
-                for (int x = 0; x < gridWidth; x++)
-                {
-                    map[x, y] = tempMap[x, y];
                 }
             }
         }
